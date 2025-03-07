@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cillivation and countries v0.0.1b - bg-2</title>
+    <style>
+        canvas {
+            border: 0px solid black; /* Viền đen cho dễ nhìn */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Ảnh nền
+        const background = new Image();
+        background.src = "Background.png";
+
+        // Ảnh nhân vật
+        const images = {
+            default: "MyPic.png",
+            left: "MyPic2.png",
+            right: "MyPic3.png"
+        };
+
+        let currentImage = new Image();
+        currentImage.src = images.default;
+
+        // Kích thước nhân vật
+        const playerSize = 50;
+
+        // Vị trí & vận tốc
+        let x, y;
+        let vx = 0, vy = 0;
+        let ax = 0, ay = 0;
+        const acceleration = 0.033;
+        const friction = 0.9;
+        const maxSpeed = 1.33;
+
+        const keys = {}; // Lưu trạng thái phím
+
+        let bgWidth, bgHeight;
+        let diamondCenterX, diamondCenterY;
+        let diamondWidth, diamondHeight;
+
+        // Khi ảnh nền tải xong, lấy kích thước ảnh & vẽ lần đầu
+        background.onload = function () {
+            bgWidth = background.width;
+            bgHeight = background.height;
+
+            // Cập nhật kích thước canvas bằng đúng Background.png
+            canvas.width = bgWidth;
+            canvas.height = bgHeight;
+
+            // Xác định hình thoi
+            diamondCenterX = bgWidth / 2;
+            diamondCenterY = bgHeight / 2;
+            diamondWidth = bgWidth / 2 - 10;  // Giới hạn viền trong
+            diamondHeight = bgHeight / 2 - 10;
+
+            // Đặt nhân vật vào trung tâm hình thoi
+            x = diamondCenterX - playerSize / 2;
+            y = diamondCenterY - playerSize / 2;
+
+            requestAnimationFrame(update);
+        };
+
+        function update() {
+            ax = 0;
+            ay = 0;
+
+            // Xử lý hướng đi
+            if (keys["ArrowUp"] || keys["w"]) ay -= acceleration;
+            if (keys["ArrowDown"] || keys["s"]) ay += acceleration;
+            if (keys["ArrowLeft"] || keys["a"]) {
+                ax -= acceleration;
+                currentImage.src = images.left;
+            }
+            if (keys["ArrowRight"] || keys["d"]) {
+                ax += acceleration;
+                currentImage.src = images.right;
+            }
+
+            // Nếu không nhấn phím trái/phải, quay về ảnh mặc định
+            if (!keys["ArrowLeft"] && !keys["a"] && !keys["ArrowRight"] && !keys["d"]) {
+                currentImage.src = images.default;
+            }
+
+            // Cập nhật vận tốc (thêm ma sát)
+            vx += ax;
+            vy += ay;
+            vx *= friction;
+            vy *= friction;
+
+            // Giới hạn tốc độ tối đa
+            vx = Math.max(-maxSpeed, Math.min(maxSpeed, vx));
+            vy = Math.max(-maxSpeed, Math.min(maxSpeed, vy));
+
+            // Cập nhật vị trí
+            let newX = x + vx;
+            let newY = y + vy;
+
+            // Nếu ra ngoài hình thoi, giữ nhân vật trong biên
+            if (isInsideDiamond(newX + playerSize / 2, newY + playerSize / 2)) {
+                x = newX;
+                y = newY;
+            } else {
+                vx = 0; // Dừng lại khi chạm viền
+                vy = 0;
+            }
+
+            // Vẽ lại canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(background, 0, 0); // Vẽ nền
+            ctx.drawImage(currentImage, x, y, playerSize, playerSize); // Vẽ nhân vật
+
+            // Lặp lại update
+            requestAnimationFrame(update);
+        }
+
+        // Hàm kiểm tra điểm có nằm trong hình thoi không
+        function isInsideDiamond(px, py) {
+            let dx = Math.abs(px - diamondCenterX);
+            let dy = Math.abs(py - diamondCenterY);
+            return dx / diamondWidth + dy / diamondHeight <= 1;
+        }
+
+        // Lắng nghe sự kiện phím
+        window.addEventListener("keydown", (event) => {
+            keys[event.key] = true;
+        });
+
+        window.addEventListener("keyup", (event) => {
+            keys[event.key] = false;
+        });
+    </script>
+</body>
+</html>
